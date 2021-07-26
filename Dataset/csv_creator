@@ -1,0 +1,19 @@
+#to use create_a_Custom_dataset we need a csv file
+#this code work with a dataset where image are divide in different refactory under the name of them class 
+
+import csv
+
+import os
+
+with open('innovators.csv', 'w', newline='') as file: #create or open csv file
+
+    writer = csv.writer(file)
+    DATADIR = r"C:\Users\servi\Desktop\Images_subset_manual"
+    #
+    CATEGORIES = [ "bodylotion", "book", 'flower', 'hairclip', 'mug', 'pencilcase', 'ringbinder', 'sodabottle',
+                  'sprayer', 'wallet']
+
+    for category in CATEGORIES:
+        path = os.path.join(DATADIR, category) 
+        for img in os.listdir(path):
+            writer.writerow([img, CATEGORIES.index(category)]) #write the name of the image and after a coma its class (example: bodylotion, 1)
