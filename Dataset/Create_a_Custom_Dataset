@@ -1,0 +1,24 @@
+import os
+import pandas as pd
+import torch
+from torch.utils.data import Dataset
+from skimage import io
+#to use this type of creator data set you need to change the data set and put all image in one folder and use csv with annotation
+class ObjectDatabase(Dataset):
+    def __init__(self, csv_file, root_dir,transform=None):
+        self.anntations = pd.read_csv(csv_file) #File csv that connect the name of the immage to his label
+        self.root_dir=root_dir #database's path
+        self.transform=transform #trasformation on dataset's image
+
+    def __len__(self):
+        return len(self.anntations) #retun the size of the dataset
+
+  #creation of the dataset
+    def __getitem__(self, index): 
+        img_path = os.path.join(self.root_dir, self.anntations.iloc[index, 0])
+        image = io.imread(img_path)
+        y_label = torch.tensor(int(self.anntations.iloc[index, 1]))
+        if self.transform:
+            image = self.transform(image)
+
+        return (image, y_label)
