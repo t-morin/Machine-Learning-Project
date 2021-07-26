@@ -1,0 +1,26 @@
+#pip install -U scikit-learn
+#https://scikit-learn.org/stable/modules/generated/sklearn.multiclass.OneVsRestClassifier.html
+#https://robotology.github.io/iCubWorld/#icubworld-transformations-modal
+
+import numpy as np
+from sklearn.multiclass import OneVsRestClassifier
+from sklearn.svm import SVC
+
+#example of x_trainig set
+X = np.array([
+    [10, 10],
+    [8, 10],
+    [-5, 5.5],
+    [-5.4, 5.5],
+    [-20, -20],
+    [-15, -20]
+])
+
+#example of y_trainig set
+y = np.array([0, 0, 1, 1, 2, 2])
+
+#creation and training of classifier 
+clf = OneVsRestClassifier(SVC()).fit(X, y)
+
+#predict 
+print(clf.predict([[-19, -20], [9, 9], [-5, 5]]))
