@@ -24,7 +24,7 @@ for doss in os.listdir(path):
             break
 
 
-#np.save(os.path.join(r'C:\Users\thoma\OneDrive\Bureau\MachineLearningProject','features'),np.array(training_data))
+np.save(os.path.join(r'C:\Users\thoma\OneDrive\Bureau\MachineLearningProject','features'),np.array(training_data))
 
 #loading the saved file once again
 saved = np.load(os.path.join(r'C:\Users\thoma\OneDrive\Bureau\MachineLearningProject','features.npy'))
