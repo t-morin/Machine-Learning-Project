@@ -1,0 +1,57 @@
+from sklearn import svm
+from sklearn.utils import shuffle
+import sklearn.model_selection as model_selection
+from sklearn.multiclass import OneVsRestClassifier
+from sklearn.metrics import accuracy_score
+from sklearn.metrics import f1_score
+from sklearn import preprocessing
+from sklearn.svm import SVC
+import pickle
+
+import numpy as np
+import os
+
+nbclass = 10
+cible = []
+sampleclass = 600
+
+for i in range(1, nbclass + 1):
+    for j in range(1, sampleclass + 1):
+        cible.append([i])
+        
+#load fetures 
+X = np.load(os.path.join(r'C:\Users\servi\PycharmProjects\calm\try with my code', 'Features_Img.npy'))
+
+y = np.array(cible)
+
+nsamples, nx, ny = X.shape
+d2_X = X.reshape((nsamples, nx * ny))
+# 512 eme colonne class
+data_cl = np.c_[d2_X, y]
+data_clm = shuffle(data_cl, random_state=0)
+
+d2_X = data_clm[:, :512]
+
+#features scaler
+min_max_scaler = preprocessing.MinMaxScaler()
+d2_X = min_max_scaler.fit_transform(d2_X)
+
+y = data_clm[:, 512]
+X_train, X_test, y_train, y_test = model_selection.train_test_split(d2_X, y, train_size=0.90, test_size=0.10,
+                                                                    random_state=20)
+
+rbf = OneVsRestClassifier(SVC(kernel='rbf', gamma=1, C=1)).fit(X_train, y_train.ravel())
+rbf_pred = rbf.predict(X_test)
+
+rbf_accuracy = accuracy_score(y_test, rbf_pred)
+rbf_f1 = f1_score(y_test, rbf_pred, average='weighted')
+print('Accuracy : ', "%.2f" % (rbf_accuracy * 100))
+# print('F1 (RBF Kernel): ', "%.2f" % (rbf_f1 * 100))
+
+
+#Save the classificator
+# import sklearn.external
+import joblib
+# from sklearn.externals import joblib
+
+joblib.dump(rbf, 'ClassifierTrained.pkl')
