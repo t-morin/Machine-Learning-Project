@@ -1,0 +1,12 @@
+Librery
+
+-Os
+-Numpy
+-torch
+-torchvision
+-PIL
+-sklearn
+-pickle
+-joblib
+-cv2
+-matplotlib
