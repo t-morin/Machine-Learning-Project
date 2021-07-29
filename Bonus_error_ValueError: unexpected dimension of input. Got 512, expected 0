@@ -1,0 +1,182 @@
+
+
+import sklearn.model_selection as model_selection
+
+random_state = 999
+from secml.array import CArray
+import numpy as np
+import os
+
+nbclass = 10
+cible = []
+sampleclass = 600
+
+for i in range(1, nbclass + 1):
+    for j in range(1, sampleclass + 1):
+        cible.append([i])
+
+X = np.load(os.path.join(r'C:\Users\servi\PycharmProjects\error work\ERROR', 'Features_Img.npy'))
+y = np.array(cible)
+
+nsamples, nx, ny = X.shape
+d2_X = X.reshape((nsamples, nx * ny))
+
+# data_cl = np.c_[d2_X, y]
+# data_clm = shuffle(data_cl, random_state=0)
+#
+# d2_X = data_clm[:, :512]
+
+
+# min_max_scaler = preprocessing.MinMaxScaler()
+# d2_X = min_max_scaler.fit_transform(d2_X)
+#
+# y = data_clm[:, 512]
+X_train, X_test, y_train, y_test = model_selection.train_test_split(X, y, train_size=0.90, test_size=0.10,
+                                                                  random_state=20)
+
+X_train = CArray(X_train)
+
+X_test = CArray(X_test)
+y_train = CArray(y_train)
+y_test = CArray(y_test)
+
+
+
+
+import cv2
+import os
+
+#Convert image into numpy array
+pic = cv2.imread(r'C:\Users\servi\Desktop\pencilcase (3).jpg')
+pic = cv2.cvtColor(pic,cv2.COLOR_BGR2RGB)
+pic = cv2.resize(pic,(256,256))
+
+import numpy as np
+import torch
+from torch.autograd import Variable
+from PIL import Image
+from torchvision import transforms, models
+from sklearn import preprocessing
+
+#Extract the Features of the image
+model = models.resnet18(pretrained=True)
+layer = model._modules.get('avgpool')
+model.eval()
+
+transform = transforms.Compose([
+    transforms.Resize(256),
+    transforms.CenterCrop(224),
+    transforms.ToTensor()
+])
+
+normalize = transforms.Normalize(
+    mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+
+inv_normalize = transforms.Normalize(
+    mean=[-0.485 / 0.229, -0.456 / 0.224, -0.406 / 0.225],
+    std=[1 / 0.229, 1 / 0.224, 1 / 0.225])
+
+def get_vector(pic):
+    x = pic.reshape(256,256,3)    #Prendre une image du data set
+    x = Image.fromarray(x)       #Convertir en image PIL
+    input_tensor = Variable(normalize(transform(x)).unsqueeze(0))
+    # 3. Create a vector of zeros that will hold our feature vector
+    #    The 'avgpool' layer has an output size of 512
+    my_embedding = torch.zeros(512)
+    def copy_data(m, i, o):
+        my_embedding.copy_(o.data.reshape(o.data.size(1)))
+    # 5. Attach that function to our selected layer
+    h = layer.register_forward_hook(copy_data)
+     # 6. Run the model on our transformed image
+    model(input_tensor)
+    # 7. Detach our copy function from the layer
+    h.remove()
+    # 8. Return the feature vector
+    return my_embedding
+
+Img_feat = get_vector(pic).numpy()
+
+#Scale les features
+min_max_scaler = preprocessing.MinMaxScaler()
+Img_feat = min_max_scaler.fit_transform(Img_feat.reshape(-1,1))
+
+#import sklearn.external.joblib as extjoblib
+import joblib
+#from sklearn.externals import joblib
+
+
+rbf = joblib.load('ClassifierTrained.pkl')
+from secml.ml.classifiers import CClassifierSkLearn
+
+#Itrasform classifier to CClassifier
+cfr= CClassifierSkLearn(rbf)
+#####################################################################à
+noise_type = 'l2'  # Type of perturbation 'l1' or 'l2'
+dmax = 0.4  # Maximum perturbation
+lb, ub = 0,1  # Bounds of the attack space. Can be set to `None` for unbounded
+y_target = None  # None if `error-generic` or a class label for `error-specific`
+
+# Should be chosen depending on the optimization problem
+solver_params = {
+    'eta': 0.3,
+    'eta_min': 0.1,
+    'eta_max': None,
+    'max_iter': 100,
+    'eps': 1e-4
+}
+
+from secml.adv.attacks import CAttackEvasionPGDLS
+pgd_ls_attack = CAttackEvasionPGDLS(classifier=cfr,
+                                    double_init=False,
+                                    distance=noise_type,
+                                    dmax=dmax,
+                                    solver_params=solver_params,
+                                    y_target=y_target,
+                                    lb=lb, ub=ub)
+
+#
+##############################################################
+output = cfr.predict(Img_feat.reshape(1,-1))
+
+print()
+classes=['bodylotion','book','flower','hairclip','mug','pencilcase','ringbinder','sodabottle','sprayer','wallet']
+
+print(classes[int(output.item())])
+
+# Run the evasion attack on x0
+# Run the evasion attack on x0
+from secml.array import CArray
+
+img = CArray(Img_feat.reshape(1,-1))
+#
+# x0, y0 = X_test[5, :], y_test[5, :] # Initial sample
+
+
+y_pred_pgdls, _, adv_ds_pgdls, _ = pgd_ls_attack.run( img,output)
+
+print("Original x0 label: ",output)
+print("Adversarial example label (PGD-LS): ", classes[int( y_pred_pgdls.item())])
+
+print("Number of classifier gradient evaluations: {:}"
+      "".format(pgd_ls_attack.grad_eval))
+#
+# from secml.data import CDataset
+# dataset=CDataset(X_test,y_test)
+# # Perturbation levels to test
+# from secml.array import CArray
+# e_vals = CArray.arange(start=0, step=0.1, stop=1.1)
+#
+# from secml.adv.seceval import CSecEval
+# sec_eval = CSecEval(
+#     attack=pgd_ls_attack, param_name='dmax', param_values=e_vals)
+#
+# # Run the security evaluation using the test set
+# print("Running security evaluation...")
+# sec_eval.run_sec_eval(dataset)
+#
+# from secml.figure import CFigure
+# fig = CFigure(height=5, width=5)
+#
+# # Convenience function for plotting the Security Evaluation Curve
+# fig.sp.plot_sec_eval(
+#     sec_eval.sec_eval_data, marker='o', label='SVM RBF', show_average=True)
